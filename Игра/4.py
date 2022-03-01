@@ -115,10 +115,14 @@ class Player(pygame.sprite.Sprite):
         self.pos = (pos_x, pos_y)
 
     def move(self, x, y):
+        camera.dx -= tile_width * (x - self.pos[0])
+        camera.dy -= tile_width * (y - self.pos[1])
 
         level_map[self.pos[1]][self.pos[0]] = '.'
         self.pos = (x, y)
         level_map[self.pos[1]][self.pos[0]] = '@'
+        for sprite in tiles_group:
+            camera.apply(sprite)
 
 
 class Camera:
@@ -131,6 +135,16 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
+
+        if obj.rect.y < 0:
+            obj.rect.y = level_y * tile_width - tile_width
+        elif obj.rect.y > level_y * tile_width:
+            obj.rect.y = tile_width
+
+        if obj.rect.x < 0:
+            obj.rect.x = level_x * tile_width - tile_width
+        elif obj.rect.x > level_x * tile_width:
+            obj.rect.x = tile_width
 
     # позиционировать камеру на объекте target
     def update(self, target):
@@ -150,18 +164,15 @@ def generate_level(level):
                 Tile('empty', x, y)
                 new_player = Player(x, y)
     # вернем игрока, а также размер поля в клетках
+    print(x, y)
     return new_player, x, y
 
 
 def move(player, movement):
     x, y = player.pos
-    new_map = level_map.copy()
-    up, down, left, right = (x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y)
     if movement == "up":
         if y > 0 and (level_map[y - 1][x] == "."):
-            for i in range(len(level_map)):
-                for j in range(len(level_map[0])):
-                    new_map
+            player.move(x, y - 1)
     elif movement == "down":
         if y < level_y and (level_map[y + 1][x] == "."):
             player.move(x, y + 1)
@@ -183,6 +194,8 @@ clock = pygame.time.Clock()
 tiles_group = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+
+camera = Camera()
 
 tile_images = {
     'wall': load_image('box.png'),
@@ -212,7 +225,7 @@ while running:
             elif event.key == pygame.K_d:
                 move(player, "right")
     screen.fill('black')
-    all_sprites.update()
+    camera.update(player)
     tiles_group.draw(screen)
     player_group.draw(screen)
     pygame.display.flip()
